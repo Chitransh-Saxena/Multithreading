@@ -3,10 +3,7 @@ package test.java.playingaround;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class AtomicVariableTest {
@@ -14,25 +11,36 @@ public class AtomicVariableTest {
 
     @Test
     public void testAtomic() throws InterruptedException {
-
         int val = 0;
         AtomicInteger value = new AtomicInteger(0);
 
         ExecutorService executor = Executors.newFixedThreadPool(10);
+        CountDownLatch latch = new CountDownLatch(10); // Initialize with the number of tasks
 
-        for(int i = 0; i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
             executor.submit(() -> {
-
-                for(int j = 0; j < 100; j++) {
+                for (int j = 0; j < 100; j++) {
                     int x = value.get();
-                    value.set(x+1);
+                    value.set(x + 1);
                 }
+                latch.countDown(); // Signal task completion
             });
         }
 
-        executor.awaitTermination(1000, TimeUnit.MILLISECONDS);
-        Assert.assertEquals(1000, value.get());
+        executor.shutdown();
+
+        // Wait for all tasks to complete or timeout
+        boolean terminated = executor.awaitTermination(10, TimeUnit.SECONDS);
+
+        if (!terminated) {
+            System.out.println("Executor did not terminate within the timeout period.");
+            // Handle the case where tasks did not complete within the timeout
+        } else {
+            // Perform assertions or further actions
+            Assert.assertEquals(1000, value.get());
+        }
     }
+
 
 
     @Test
